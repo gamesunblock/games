@@ -76,7 +76,7 @@
         let dragons = [];
         let groundLines = [];
         let energy = 15; // Energie in seconden
-        let speed = 3; // Gebalanceerde snelheid
+        let speed = 4; // Basis snelheid
         let score = 0;
         let highscore = localStorage.getItem("highscore") || 0;
         let gameRunning = false;
@@ -101,12 +101,7 @@
         }
 
         function drawDragons() {
-            ctx.fillStyle = "green";
-            dragons.forEach(dragon => {
-                ctx.beginPath();
-                ctx.arc(dragon.x, dragon.y, 20, 0, Math.PI * 2); // Draakiestijl met cirkels
-                ctx.fill();
-            });
+            // Removed circular dragons since you wanted an energy bar instead
         }
 
         function drawGround() {
@@ -144,11 +139,6 @@
             obstacles.push({ x: canvas.width, y: canvas.height - size - 100, width: size, height: size });
         }
 
-        function spawnDragons() {
-            const height = canvas.height - 150;
-            dragons.push({ x: canvas.width, y: height - 20 }); // Draaks op hoofdhoogte
-        }
-
         function spawnGroundLines() {
             groundLines.push({ x: canvas.width });
         }
@@ -172,17 +162,13 @@
 
             obstacles.forEach(obstacle => obstacle.x -= sprinting ? speed * 4 : speed);
             groundLines.forEach(line => line.x -= sprinting ? speed * 4 : speed);
-            dragons.forEach(dragon => dragon.x -= sprinting ? speed * 4 : speed);
 
             obstacles = obstacles.filter(obstacle => obstacle.x + obstacle.width > 0);
             groundLines = groundLines.filter(line => line.x > -30);
-            dragons = dragons.filter(dragon => dragon.x > -30);
 
             drawObstacles();
-            drawDragons();
 
             if (Math.random() < 0.03) spawnObstacle(); // 3% kans per frame
-            if (Math.random() < 0.05) spawnDragons(); // 5% kans per frame
             if (Math.random() < 0.02) spawnGroundLines(); // 2% kans per frame
 
             obstacles.forEach(obstacle => {
@@ -191,17 +177,6 @@
                     stickman.x + stickman.width > obstacle.x &&
                     stickman.y < obstacle.y + obstacle.height &&
                     stickman.y + stickman.height > obstacle.y
-                ) {
-                    endGame();
-                }
-            });
-
-            dragons.forEach(dragon => {
-                if (
-                    stickman.x < dragon.x + 40 &&
-                    stickman.x + stickman.width > dragon.x &&
-                    stickman.y < dragon.y + 40 &&
-                    stickman.y + stickman.height > dragon.y
                 ) {
                     endGame();
                 }
@@ -230,7 +205,6 @@
             stickman.y = canvas.height - 100 - stickman.height;
             obstacles = [];
             groundLines = [];
-            dragons = [];
             score = 0;
             energy = 15;
             gameRunning = true;
@@ -255,7 +229,7 @@
                 }
             } else if (e.key.toLowerCase() === "s") {
                 stickman.crouching = true;
-            } else if (e.key.toLowerCase() === "w") {
+            } else if (e.key.toLowerCase() === "d") {
                 sprinting = true;
             }
         });
@@ -263,16 +237,15 @@
         document.addEventListener("keyup", e => {
             if (e.key.toLowerCase() === "s") {
                 stickman.crouching = false;
-            } else if (e.key.toLowerCase() === "w") {
+            } else if (e.key.toLowerCase() === "d") {
                 sprinting = false;
             }
         });
 
         startBtn.addEventListener("click", () => {
-            startBtn.style.display = "none";
             startGame();
+            startBtn.style.display = "none";
         });
-
     </script>
 </body>
 </html>
