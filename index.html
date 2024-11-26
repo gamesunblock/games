@@ -9,7 +9,7 @@
             margin: 0;
             overflow: hidden;
             font-family: Arial, sans-serif;
-            background: linear-gradient(to bottom, #9b5de5, #f15bb5); /* Paarse zonsondergang */
+            background: linear-gradient(to bottom, #9b5de5, #f15bb5);
         }
 
         canvas {
@@ -18,16 +18,23 @@
             height: 100vh;
         }
 
-        #highscore-display {
+        #highscore-display, #score-display {
             position: absolute;
             top: 10px;
-            right: 10px;
             font-size: 20px;
             color: #fff;
             background: rgba(0, 0, 0, 0.5);
             padding: 5px 10px;
             border-radius: 5px;
             z-index: 10;
+        }
+
+        #highscore-display {
+            right: 10px;
+        }
+
+        #score-display {
+            left: 10px;
         }
 
         button {
@@ -52,19 +59,23 @@
 </head>
 <body>
     <canvas id="gameCanvas"></canvas>
+    <div id="score-display">Score: <span id="score">0</span></div>
     <div id="highscore-display">Highscore: <span id="highscore">0</span></div>
     <button id="startBtn">Play Game</button>
     <script>
         const canvas = document.getElementById("gameCanvas");
         const ctx = canvas.getContext("2d");
         const startBtn = document.getElementById("startBtn");
+        const scoreDisplay = document.getElementById("score");
         const highscoreDisplay = document.getElementById("highscore");
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
 
         let stickman = { x: 50, y: canvas.height - 150, width: 20, height: 50, vy: 0, jumping: false };
         let obstacles = [];
-        let speed = 4; // 2x sneller dan vorige versie
+        let groundLines = [];
+        let energy = 15; // Energie in seconden
+        let speed = 4; // Basis snelheid
         let score = 0;
         let highscore = localStorage.getItem("highscore") || 0;
         let gameRunning = false;
@@ -74,7 +85,6 @@
         highscoreDisplay.textContent = highscore;
 
         function drawStickman() {
-            // Tekent een stickman met details
             ctx.fillStyle = "black";
             ctx.fillRect(stickman.x, stickman.y, stickman.width, stickman.height);
             ctx.fillStyle = "white";
@@ -85,24 +95,47 @@
             ctx.fillStyle = "gray";
             obstacles.forEach(obstacle => {
                 ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
-                ctx.fillStyle = "black";
-                ctx.strokeRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height); // Randje
+                ctx.strokeStyle = "black";
+                ctx.strokeRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height); // Rand
             });
         }
 
         function drawGround() {
-            // Tekent een donkere grond met details
             ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
             ctx.fillRect(0, canvas.height - 100, canvas.width, 100);
-            for (let i = 0; i < canvas.width; i += 50) {
+
+            // Beweegbare lijnen op de grond
+            groundLines.forEach(line => {
                 ctx.fillStyle = "rgba(50, 50, 50, 0.7)";
-                ctx.fillRect(i, canvas.height - 100, 25, 10);
-            }
+                ctx.fillRect(line.x, canvas.height - 90, 25, 10);
+            });
+        }
+
+        function drawEnergyBar() {
+            const centerX = 60;
+            const centerY = 60;
+            const radius = 40;
+            const angle = (energy / 15) * 2 * Math.PI;
+
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+            ctx.fillStyle = "rgba(255, 255, 255, 0.2)";
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, radius, -Math.PI / 2, -Math.PI / 2 + angle, false);
+            ctx.lineWidth = 10;
+            ctx.strokeStyle = energy > 3 ? "lime" : "red";
+            ctx.stroke();
         }
 
         function spawnObstacle() {
             const size = Math.random() * 40 + 20;
             obstacles.push({ x: canvas.width, y: canvas.height - size - 100, width: size, height: size });
+        }
+
+        function spawnGroundLines() {
+            groundLines.push({ x: canvas.width });
         }
 
         function updateGame() {
@@ -111,6 +144,7 @@
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
             drawGround();
+            drawEnergyBar();
 
             // Stickman physics
             stickman.y += stickman.vy;
@@ -122,9 +156,13 @@
 
             drawStickman();
 
-            // Obstacles movement
+            // Obstacles and ground movement
             obstacles.forEach(obstacle => obstacle.x -= sprinting ? speed * 4 : speed);
+            groundLines.forEach(line => line.x -= sprinting ? speed * 4 : speed);
+
             obstacles = obstacles.filter(obstacle => obstacle.x + obstacle.width > 0);
+            groundLines = groundLines.filter(line => line.x > -30);
+
             drawObstacles();
 
             // Collision detection
@@ -139,11 +177,23 @@
                 }
             });
 
-            // Increase score and spawn obstacles
-            score += 1;
-            if (score % 800 === 0) spawnObstacle();
+            // Score
+            score += sprinting ? 2 : 1;
+            scoreDisplay.textContent = score;
 
-            // Update highscore
+            // Spawn new obstacles and lines
+            if (score % 800 === 0) spawnObstacle();
+            if (score % 200 === 0) spawnGroundLines();
+
+            // Update energy
+            if (sprinting) {
+                energy -= 0.1;
+                if (energy <= 0) sprinting = false;
+            } else if (energy < 15) {
+                energy += 0.05;
+            }
+
+            // Highscore update
             if (score > highscore) {
                 highscore = score;
                 localStorage.setItem("highscore", highscore);
@@ -158,11 +208,14 @@
             stickman.vy = 0;
             stickman.jumping = false;
             obstacles = [];
+            groundLines = [];
             speed = 4;
             score = 0;
+            energy = 15;
             gameRunning = true;
             paused = false;
             spawnObstacle();
+            spawnGroundLines();
             startBtn.style.display = "none";
             updateGame();
         }
@@ -185,7 +238,7 @@
                 stickman.jumping = true;
                 stickman.vy = -15;
             }
-            if (e.key === "d") {
+            if (e.key === "d" && energy > 0) {
                 sprinting = true;
             }
             if (e.key === "Escape") {
