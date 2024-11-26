@@ -115,25 +115,38 @@
             color: "#fff",
             vy: 0,
             jumping: false,
-            crouching: false
+            crouching: false,
+            legFrame: 0 // Frame for moving legs
         };
 
         function drawStickman() {
             ctx.fillStyle = stickman.color;
             ctx.fillRect(stickman.x, stickman.crouching ? stickman.y + 20 : stickman.y, stickman.width, stickman.crouching ? 30 : stickman.height);
+
+            // Moving legs
+            if (!stickman.crouching && !stickman.jumping) {
+                ctx.fillStyle = "black";
+                let legHeight = 20 + Math.sin(stickman.legFrame) * 10;
+                ctx.fillRect(stickman.x + 10, stickman.y + 50, 10, legHeight); // Left leg
+                ctx.fillRect(stickman.x + 30, stickman.y + 50, 10, 50 - legHeight); // Right leg
+                stickman.legFrame += 0.2;
+            }
         }
 
         function drawObstacle(obstacle) {
             ctx.fillStyle = "#7a7a7a";
-            ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
+            ctx.fillRect(obstacle.x, obstacle.y - 20, obstacle.width, obstacle.height);
+            ctx.fillStyle = "black";
+            ctx.fillRect(obstacle.x, obstacle.y + obstacle.height - 5, obstacle.width, 5); // Shadow effect
         }
 
         function drawDragon(dragon) {
             ctx.fillStyle = "green";
             ctx.beginPath();
-            ctx.arc(dragon.x, dragon.y, 20, 0, Math.PI * 2);
+            ctx.ellipse(dragon.x, dragon.y, 30, 15, Math.sin(dragon.frame) * Math.PI / 4, 0, Math.PI * 2);
             ctx.closePath();
             ctx.fill();
+            dragon.frame += 0.1;
         }
 
         function updateGame() {
@@ -144,7 +157,7 @@
             }
 
             if (Math.random() < 0.01) {
-                dragons.push({ x: canvas.width, y: Math.random() * (canvas.height - 200) });
+                dragons.push({ x: canvas.width, y: Math.random() * (canvas.height - 200), frame: 0 });
             }
 
             obstacles.forEach(obstacle => {
@@ -168,10 +181,10 @@
                 drawDragon(dragon);
 
                 if (
-                    stickman.x < dragon.x + 20 &&
-                    stickman.x + stickman.width > dragon.x - 20 &&
-                    stickman.y < dragon.y + 20 &&
-                    stickman.y + stickman.height > dragon.y
+                    stickman.x < dragon.x + 30 &&
+                    stickman.x + stickman.width > dragon.x - 30 &&
+                    stickman.y < dragon.y + 15 &&
+                    stickman.y + stickman.height > dragon.y - 15
                 ) {
                     endGame();
                 }
@@ -233,7 +246,7 @@
                 stickman.vy = -15;
             } else if (e.key.toLowerCase() === "s") {
                 stickman.crouching = true;
-            } else if (e.key.toLowerCase() === "d") {
+            } else if (e.key.toLowerCase() === "shift" && canSprint) {
                 sprinting = true;
             }
         });
@@ -241,14 +254,14 @@
         document.addEventListener("keyup", e => {
             if (e.key.toLowerCase() === "s") {
                 stickman.crouching = false;
-            } else if (e.key.toLowerCase() === "d") {
+            } else if (e.key.toLowerCase() === "shift") {
                 sprinting = false;
             }
         });
 
         startBtn.addEventListener("click", () => {
-            startGame();
             startBtn.style.display = "none";
+            startGame();
         });
     </script>
 </body>
