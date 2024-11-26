@@ -71,8 +71,9 @@
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
 
-        let stickman = { x: 50, y: canvas.height - 150, width: 20, height: 50, vy: 0, jumping: false };
+        let stickman = { x: 50, y: canvas.height - 150, width: 20, height: 50, vy: 0, jumping: false, crouching: false };
         let obstacles = [];
+        let dragons = [];
         let groundLines = [];
         let energy = 15; // Energie in seconden
         let speed = 4; // Basis snelheid
@@ -86,7 +87,8 @@
 
         function drawStickman() {
             ctx.fillStyle = "black";
-            ctx.fillRect(stickman.x, stickman.y, stickman.width, stickman.height);
+            const height = stickman.crouching ? stickman.height / 2 : stickman.height;
+            ctx.fillRect(stickman.x, stickman.y + (stickman.crouching ? stickman.height / 2 : 0), stickman.width, height);
             ctx.fillStyle = "white";
             ctx.fillRect(stickman.x + 5, stickman.y - 10, 10, 10); // Hoofd
         }
@@ -95,8 +97,25 @@
             ctx.fillStyle = "gray";
             obstacles.forEach(obstacle => {
                 ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
+                // Lijnen patroon
+                for (let i = 0; i < obstacle.height; i += 5) {
+                    ctx.strokeStyle = "white";
+                    ctx.beginPath();
+                    ctx.moveTo(obstacle.x, obstacle.y + i);
+                    ctx.lineTo(obstacle.x + obstacle.width, obstacle.y + i);
+                    ctx.stroke();
+                }
+            });
+        }
+
+        function drawDragons() {
+            ctx.fillStyle = "red";
+            dragons.forEach(dragon => {
+                ctx.beginPath();
+                ctx.arc(dragon.x, dragon.y, 15, 0, Math.PI * 2);
+                ctx.fill();
                 ctx.strokeStyle = "black";
-                ctx.strokeRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height); // Rand
+                ctx.stroke();
             });
         }
 
@@ -112,26 +131,30 @@
         }
 
         function drawEnergyBar() {
-            const centerX = 60;
-            const centerY = 60;
-            const radius = 40;
-            const angle = (energy / 15) * 2 * Math.PI;
+            const barWidth = 300;
+            const barHeight = 20;
+            const x = 20;
+            const y = 20;
 
-            ctx.beginPath();
-            ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
             ctx.fillStyle = "rgba(255, 255, 255, 0.2)";
-            ctx.fill();
+            ctx.fillRect(x, y, barWidth, barHeight);
 
-            ctx.beginPath();
-            ctx.arc(centerX, centerY, radius, -Math.PI / 2, -Math.PI / 2 + angle, false);
-            ctx.lineWidth = 10;
-            ctx.strokeStyle = energy > 3 ? "lime" : "red";
-            ctx.stroke();
+            ctx.fillStyle = energy > 3 ? "lime" : "red";
+            ctx.fillRect(x, y, (energy / 15) * barWidth, barHeight);
+
+            ctx.lineWidth = 5;
+            ctx.strokeStyle = "white";
+            ctx.strokeRect(x, y, barWidth, barHeight);
         }
 
         function spawnObstacle() {
-            const size = Math.random() * 40 + 20;
+            const size = Math.random() * 20 + 20; // Kleinere obstakels
             obstacles.push({ x: canvas.width, y: canvas.height - size - 100, width: size, height: size });
+        }
+
+        function spawnDragon() {
+            const yPosition = Math.random() * (canvas.height - 200) + 100;
+            dragons.push({ x: canvas.width, y: yPosition });
         }
 
         function spawnGroundLines() {
@@ -146,7 +169,6 @@
             drawGround();
             drawEnergyBar();
 
-            // Stickman physics
             stickman.y += stickman.vy;
             if (stickman.jumping) stickman.vy += 1;
             if (stickman.y >= canvas.height - 100 - stickman.height) {
@@ -156,14 +178,16 @@
 
             drawStickman();
 
-            // Obstacles and ground movement
             obstacles.forEach(obstacle => obstacle.x -= sprinting ? speed * 4 : speed);
+            dragons.forEach(dragon => dragon.x -= sprinting ? speed * 4 : speed);
             groundLines.forEach(line => line.x -= sprinting ? speed * 4 : speed);
 
             obstacles = obstacles.filter(obstacle => obstacle.x + obstacle.width > 0);
+            dragons = dragons.filter(dragon => dragon.x > -30);
             groundLines = groundLines.filter(line => line.x > -30);
 
             drawObstacles();
+            drawDragons();
 
             // Collision detection
             obstacles.forEach(obstacle => {
@@ -177,15 +201,26 @@
                 }
             });
 
-            // Score
+            dragons.forEach(dragon => {
+                if (
+                    stickman.x < dragon.x + 15 &&
+                    stickman.x + stickman.width > dragon.x - 15 &&
+                    stickman.y < dragon.y + 15 &&
+                    stickman.y + stickman.height > dragon.y - 15
+                ) {
+                    endGame();
+                }
+            });
+
+            // Update score
             score += sprinting ? 2 : 1;
             scoreDisplay.textContent = score;
 
-            // Spawn new obstacles and lines
             if (score % 800 === 0) spawnObstacle();
+            if (score % 1200 === 0) spawnDragon();
             if (score % 200 === 0) spawnGroundLines();
 
-            // Update energy
+            // Energy
             if (sprinting) {
                 energy -= 0.1;
                 if (energy <= 0) sprinting = false;
@@ -193,7 +228,6 @@
                 energy += 0.05;
             }
 
-            // Highscore update
             if (score > highscore) {
                 highscore = score;
                 localStorage.setItem("highscore", highscore);
@@ -205,51 +239,49 @@
 
         function startGame() {
             stickman.y = canvas.height - 100 - stickman.height;
-            stickman.vy = 0;
-            stickman.jumping = false;
             obstacles = [];
+            dragons = [];
             groundLines = [];
-            speed = 4;
             score = 0;
             energy = 15;
             gameRunning = true;
             paused = false;
+            sprinting = false;
             spawnObstacle();
+            spawnDragon();
             spawnGroundLines();
-            startBtn.style.display = "none";
             updateGame();
         }
 
         function endGame() {
             gameRunning = false;
-            alert("Game Over! Your score: " + score);
-            startBtn.style.display = "block";
+            alert(`Game over! Your score: ${score}`);
         }
-
-        function togglePause() {
-            paused = !paused;
-            if (!paused) updateGame();
-        }
-
-        startBtn.addEventListener("click", startGame);
 
         document.addEventListener("keydown", e => {
-            if (e.key === "w" && !stickman.jumping) {
-                stickman.jumping = true;
-                stickman.vy = -15;
-            }
-            if (e.key === "d" && energy > 0) {
+            if (e.key === " ") {
+                if (!stickman.jumping) {
+                    stickman.jumping = true;
+                    stickman.vy = -15;
+                }
+            } else if (e.key.toLowerCase() === "s") {
+                stickman.crouching = true;
+            } else if (e.key.toLowerCase() === "d") {
                 sprinting = true;
-            }
-            if (e.key === "Escape") {
-                togglePause();
             }
         });
 
         document.addEventListener("keyup", e => {
-            if (e.key === "d") {
+            if (e.key.toLowerCase() === "s") {
+                stickman.crouching = false;
+            } else if (e.key.toLowerCase() === "d") {
                 sprinting = false;
             }
+        });
+
+        startBtn.addEventListener("click", () => {
+            startGame();
+            startBtn.style.display = "none";
         });
     </script>
 </body>
