@@ -1,23 +1,19 @@
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 const startBtn = document.getElementById("startBtn");
-const levelSpan = document.getElementById("level");
-const highscoreSpan = document.getElementById("highscore");
-
-canvas.width = 800;
-canvas.height = 400;
+const highscoreDisplay = document.getElementById("highscore");
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
 
 // Stickman and game variables
-let stickman = { x: 50, y: 350, width: 20, height: 50, vy: 0, jumping: false };
+let stickman = { x: 50, y: canvas.height - 100, width: 20, height: 50, vy: 0, jumping: false };
 let obstacles = [];
-let speed = 5;
+let speed = 2;
 let score = 0;
-let level = 1;
 let highscore = localStorage.getItem("highscore") || 0;
+let gameRunning = false;
 
-// Update UI
-levelSpan.textContent = level;
-highscoreSpan.textContent = highscore;
+highscoreDisplay.textContent = highscore;
 
 function drawStickman() {
     ctx.fillStyle = "black";
@@ -25,25 +21,29 @@ function drawStickman() {
 }
 
 function drawObstacles() {
-    ctx.fillStyle = "red";
+    ctx.fillStyle = "darkred";
     obstacles.forEach(obstacle => {
         ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
     });
 }
 
 function spawnObstacle() {
-    const size = Math.random() * 30 + 20;
-    obstacles.push({ x: canvas.width, y: 350, width: size, height: size });
+    const size = Math.random() * 40 + 20;
+    obstacles.push({ x: canvas.width, y: canvas.height - size - 50, width: size, height: size });
 }
 
 function updateGame() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+    // Draw background
+    ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
+    ctx.fillRect(0, canvas.height - 100, canvas.width, 100);
+
     // Stickman physics
     stickman.y += stickman.vy;
     if (stickman.jumping) stickman.vy += 1;
-    if (stickman.y >= 350) {
-        stickman.y = 350;
+    if (stickman.y >= canvas.height - 100 - stickman.height) {
+        stickman.y = canvas.height - 100 - stickman.height;
         stickman.jumping = false;
     }
 
@@ -66,45 +66,45 @@ function updateGame() {
         }
     });
 
-    // Increase score
+    // Increase score and speed
     score += 1;
-    if (score % 500 === 0) {
-        level++;
-        levelSpan.textContent = level;
-        speed++;
+    if (score % 1000 === 0) {
+        speed += 0.5;
         spawnObstacle();
     }
 
     if (score > highscore) {
         highscore = score;
         localStorage.setItem("highscore", highscore);
-        highscoreSpan.textContent = highscore;
+        highscoreDisplay.textContent = highscore;
     }
 
-    requestAnimationFrame(updateGame);
+    if (gameRunning) requestAnimationFrame(updateGame);
 }
 
 function startGame() {
-    stickman.y = 350;
+    stickman.y = canvas.height - 100 - stickman.height;
     stickman.vy = 0;
     stickman.jumping = false;
     obstacles = [];
-    speed = 5;
+    speed = 2;
     score = 0;
-    level = 1;
-    levelSpan.textContent = level;
+    gameRunning = true;
     spawnObstacle();
+    startBtn.style.display = "none";
     updateGame();
 }
 
 function endGame() {
+    gameRunning = false;
     alert("Game Over! Your score: " + score);
-    startGame();
+    startBtn.style.display = "block";
 }
 
 startBtn.addEventListener("click", startGame);
+
 document.addEventListener("keydown", e => {
-    if (e.code === "Space" && !stickman.jumping) {
+    if (e.key === "w" && !stickman.jumping) {
         stickman.jumping = true;
         stickman.vy = -15;
     }
