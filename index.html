@@ -9,14 +9,13 @@
             margin: 0;
             overflow: hidden;
             font-family: Arial, sans-serif;
+            background: linear-gradient(to bottom, #9b5de5, #f15bb5); /* Paarse achtergrond */
         }
 
         canvas {
             display: block;
             width: 100%;
             height: 100vh;
-            background: linear-gradient(to bottom, #9b5de5, #f15bb5);
-            display: none; /* Initially hidden until the game starts */
         }
 
         #highscore-display {
@@ -64,12 +63,14 @@
         canvas.height = window.innerHeight;
 
         // Stickman and game variables
-        let stickman = { x: 50, y: canvas.height - 100, width: 20, height: 50, vy: 0, jumping: false };
+        let stickman = { x: 50, y: canvas.height - 150, width: 20, height: 50, vy: 0, jumping: false };
         let obstacles = [];
         let speed = 2;
         let score = 0;
         let highscore = localStorage.getItem("highscore") || 0;
         let gameRunning = false;
+        let paused = false;
+        let sprinting = false;
 
         highscoreDisplay.textContent = highscore;
 
@@ -79,7 +80,7 @@
         }
 
         function drawObstacles() {
-            ctx.fillStyle = "gray"; // Obstacles are now gray
+            ctx.fillStyle = "gray"; // Obstacles are gray
             obstacles.forEach(obstacle => {
                 ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
             });
@@ -87,13 +88,15 @@
 
         function spawnObstacle() {
             const size = Math.random() * 40 + 20;
-            obstacles.push({ x: canvas.width, y: canvas.height - size - 50, width: size, height: size });
+            obstacles.push({ x: canvas.width, y: canvas.height - size - 100, width: size, height: size });
         }
 
         function updateGame() {
+            if (paused) return;
+
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            // Draw background
+            // Draw ground
             ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
             ctx.fillRect(0, canvas.height - 100, canvas.width, 100);
 
@@ -108,7 +111,7 @@
             drawStickman();
 
             // Obstacles movement
-            obstacles.forEach(obstacle => obstacle.x -= speed);
+            obstacles.forEach(obstacle => obstacle.x -= sprinting ? speed * 2 : speed);
             obstacles = obstacles.filter(obstacle => obstacle.x + obstacle.width > 0);
             drawObstacles();
 
@@ -148,9 +151,9 @@
             speed = 2;
             score = 0;
             gameRunning = true;
+            paused = false;
             spawnObstacle();
             startBtn.style.display = "none";
-            canvas.style.display = "block"; // Show the canvas when the game starts
             updateGame();
         }
 
@@ -158,7 +161,11 @@
             gameRunning = false;
             alert("Game Over! Your score: " + score);
             startBtn.style.display = "block";
-            canvas.style.display = "none"; // Hide canvas after game over
+        }
+
+        function togglePause() {
+            paused = !paused;
+            if (!paused) updateGame();
         }
 
         startBtn.addEventListener("click", startGame);
@@ -167,6 +174,18 @@
             if (e.key === "w" && !stickman.jumping) {
                 stickman.jumping = true;
                 stickman.vy = -15;
+            }
+            if (e.key === "d") {
+                sprinting = true;
+            }
+            if (e.key === "Escape") {
+                togglePause();
+            }
+        });
+
+        document.addEventListener("keyup", e => {
+            if (e.key === "d") {
+                sprinting = false;
             }
         });
     </script>
