@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Stickman Running</title>
+  <style>
+    canvas {
+      display: block;
+      margin: 0 auto;
+      background: linear-gradient(to top, #87CEEB, #FFFFFF);
+    }
+
+    #energy-bar {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      width: 200px;
+      height: 20px;
+      border: 2px solid black;
+      background: rgba(0, 0, 0, 0.1);
+    }
+
+    #energy-bar div {
+      height: 100%;
+      background: green;
+      width: 100%;
+      transition: width 0.1s ease-out;
+    }
+  </style>
+</head>
+<body>
+  <div id="energy-bar">
+    <div id="energy"></div>
+  </div>
+  <canvas id="gameCanvas" width="800" height="400"></canvas>
+
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    const stickman = { x: 50, y: 300, width: 50, height: 100, speed: 2, jump: false, crouch: false, sprinting: false };
+    const ground = 350;
+    const energyBar = document.getElementById('energy');
+    let energy = 100;
+    let sprintCooldown = false;
+
+    let keys = {};
+
+    window.addEventListener('keydown', (e) => keys[e.key] = true);
+    window.addEventListener('keyup', (e) => keys[e.key] = false);
+
+    function update() {
+      // Sprint mechanic
+      if (keys['Shift'] && energy > 0 && !sprintCooldown) {
+        stickman.speed = 5;
+        energy -= 1;
+        if (energy <= 0) sprintCooldown = true;
+      } else {
+        stickman.speed = 2;
+        if (energy < 100 && !keys['Shift']) energy += 0.5;
+        if (energy >= 100) sprintCooldown = false;
+      }
+
+      // Movement
+      if (keys['d']) stickman.x += stickman.speed;
+      if (keys['s']) stickman.crouch = true;
+      else stickman.crouch = false;
+
+      // Jump
+      if (keys['w'] && !stickman.jump) {
+        stickman.y -= 80;
+        stickman.jump = true;
+      }
+
+      if (stickman.jump) {
+        stickman.y += 5; // Gravity
+        if (stickman.y >= ground) {
+          stickman.y = ground;
+          stickman.jump = false;
+        }
+      }
+
+      // Update energy bar
+      energyBar.style.width = `${energy}%`;
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Draw stickman
+      ctx.fillStyle = 'black';
+      ctx.fillRect(stickman.x, stickman.y - (stickman.crouch ? 50 : 0), stickman.width, stickman.crouch ? 50 : stickman.height);
+    }
+
+    function gameLoop() {
+      update();
+      draw();
+      requestAnimationFrame(gameLoop);
+    }
+
+    gameLoop();
+  </script>
+</body>
+</html>
