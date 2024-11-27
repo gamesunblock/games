@@ -5,52 +5,76 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Games</title>
   <style>
-    /* Reset body margins */
-    body {
+    /* Algemene reset */
+    * {
       margin: 0;
-      font-family: Arial, sans-serif;
-      background: linear-gradient(to bottom, #6a0572, #ff8a65); /* Paarsige sunset */
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    /* Body styling */
+    body {
+      font-family: 'Arial', sans-serif;
+      background: linear-gradient(135deg, #6a0572, #ff8a65);
       height: 100vh;
       display: flex;
       justify-content: center;
       align-items: center;
+      color: #fff;
     }
 
-    /* Container voor de vakjes */
+    /* Container styling */
     .container {
       display: flex;
-      gap: 2px; /* Zwarte marge van 2px tussen de vakjes */
+      gap: 10px; /* Ruimte tussen de vakjes */
+      padding: 20px;
     }
 
-    /* Stijl voor de vakjes */
+    /* Vakjes styling */
     .box {
-      width: 150px;
-      height: 200px;
-      background: white;
+      width: 180px;
+      height: 220px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 10px; /* Rondere hoeken */
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
       display: flex;
       justify-content: center;
       align-items: flex-end;
-      border: 2px solid black; /* Zwarte rand */
-      box-shadow: 0 0 5px rgba(0, 0, 0, 0.5); /* Schaduw voor diepte */
-      text-align: center;
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
     }
 
-    /* Tekst in de vakjes */
+    /* Hover effect */
+    .box:hover {
+      transform: translateY(-10px);
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
+    }
+
+    /* Tekst styling */
     .box p {
       margin: 0;
-      padding-bottom: 10px; /* Zorg dat de tekst wat omhoog komt */
-      font-size: 16px;
+      font-size: 18px;
       font-weight: bold;
-      color: black;
+      color: #fff;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+      padding: 10px;
+      background: rgba(0, 0, 0, 0.5);
+      width: 100%;
+      text-align: center;
+      position: absolute;
+      bottom: 0;
     }
   </style>
 </head>
 <body>
-  <!-- Container met twee vakjes -->
   <div class="container">
+    <!-- Stickman vakje -->
     <div class="box">
       <p>Stickman Running</p>
     </div>
+    <!-- Car Racing vakje -->
     <div class="box">
       <p>Car Racing</p>
     </div>
