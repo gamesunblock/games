@@ -1,143 +1,59 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Stickman Game</title>
-    <style>
-        body {
-            margin: 0;
-            overflow: hidden;
-            background: #87CEEB; /* Luchtblauw */
-            font-family: sans-serif;
-        }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Games</title>
+  <style>
+    /* Reset body margins */
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: linear-gradient(to bottom, #6a0572, #ff8a65); /* Paarsige sunset */
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
 
-        canvas {
-            display: block;
-            width: 100%;
-            height: 100vh;
-        }
+    /* Container voor de vakjes */
+    .container {
+      display: flex;
+      gap: 2px; /* Zwarte marge van 2px tussen de vakjes */
+    }
 
-        .energy-bar {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            width: 300px;
-            height: 20px;
-            background: black;
-            border-radius: 10px;
-            overflow: hidden;
-        }
+    /* Stijl voor de vakjes */
+    .box {
+      width: 150px;
+      height: 200px;
+      background: white;
+      display: flex;
+      justify-content: center;
+      align-items: flex-end;
+      border: 2px solid black; /* Zwarte rand */
+      box-shadow: 0 0 5px rgba(0, 0, 0, 0.5); /* Schaduw voor diepte */
+      text-align: center;
+    }
 
-        .energy-fill {
-            height: 100%;
-            background: yellow;
-            border-radius: 10px;
-        }
-    </style>
+    /* Tekst in de vakjes */
+    .box p {
+      margin: 0;
+      padding-bottom: 10px; /* Zorg dat de tekst wat omhoog komt */
+      font-size: 16px;
+      font-weight: bold;
+      color: black;
+    }
+  </style>
 </head>
 <body>
-    <div class="energy-bar">
-        <div class="energy-fill" id="energyFill"></div>
+  <!-- Container met twee vakjes -->
+  <div class="container">
+    <div class="box">
+      <p>Stickman Running</p>
     </div>
-    <canvas id="gameCanvas"></canvas>
-    <script>
-        const canvas = document.getElementById("gameCanvas");
-        const ctx = canvas.getContext("2d");
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-
-        let stickman = { x: 50, y: canvas.height - 120, width: 30, height: 50, vy: 0, jumping: false };
-        let obstacles = [];
-        let dragons = [];
-        let energy = 15;
-        let speed = 3;
-        let sprinting = false;
-
-        const energyFill = document.getElementById("energyFill");
-
-        function updateEnergyBar() {
-            const percentage = (energy / 15) * 100;
-            energyFill.style.width = `${percentage}%`;
-        }
-
-        function drawStickman() {
-            ctx.fillStyle = "black";
-            ctx.fillRect(stickman.x, stickman.y, stickman.width, stickman.height);
-        }
-
-        function drawObstacles() {
-            ctx.fillStyle = "gray";
-            obstacles.forEach(obstacle => {
-                ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
-            });
-        }
-
-        function drawDragons() {
-            ctx.fillStyle = "red";
-            dragons.forEach(dragon => {
-                ctx.beginPath();
-                ctx.arc(dragon.x, dragon.y, 20, 0, Math.PI * 2);
-                ctx.fill();
-            });
-        }
-
-        function spawnObstacle() {
-            const size = Math.random() * 30 + 20;
-            obstacles.push({ x: canvas.width, y: canvas.height - size - 100, width: size, height: size });
-        }
-
-        function spawnDragon() {
-            const yPosition = stickman.y - 20; // Op hoofdhoogte
-            dragons.push({ x: canvas.width, y: yPosition });
-        }
-
-        function updateGame() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            drawStickman();
-            drawObstacles();
-            drawDragons();
-            updateEnergyBar();
-
-            stickman.y += stickman.vy;
-            if (stickman.jumping) stickman.vy += 1;
-            if (stickman.y >= canvas.height - 120) {
-                stickman.y = canvas.height - 120;
-                stickman.jumping = false;
-            }
-
-            obstacles.forEach(obstacle => obstacle.x -= speed);
-            dragons.forEach(dragon => dragon.x -= speed);
-
-            obstacles = obstacles.filter(obstacle => obstacle.x + obstacle.width > 0);
-            dragons = dragons.filter(dragon => dragon.x > 0);
-
-            if (Math.random() < 0.03) spawnObstacle();
-            if (Math.random() < 0.01) spawnDragon();
-
-            requestAnimationFrame(updateGame);
-        }
-
-        document.addEventListener("keydown", e => {
-            if (e.code === "Space" && !stickman.jumping) {
-                stickman.jumping = true;
-                stickman.vy = -15;
-            }
-            if (e.code === "ShiftLeft" && energy > 0) {
-                sprinting = true;
-                speed = 6;
-            }
-        });
-
-        document.addEventListener("keyup", e => {
-            if (e.code === "ShiftLeft") {
-                sprinting = false;
-                speed = 3;
-            }
-        });
-
-        updateGame();
-    </script>
+    <div class="box">
+      <p>Car Racing</p>
+    </div>
+  </div>
 </body>
 </html>
