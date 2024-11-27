@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Car Racing</title>
+  <style>
+    canvas {
+      display: block;
+      margin: 0 auto;
+      background-color: #eee;
+    }
+
+    #energy-bar {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      width: 200px;
+      height: 20px;
+      border: 2px solid black;
+      background: rgba(0, 0, 0, 0.1);
+    }
+
+    #energy-bar div {
+      height: 100%;
+      background: green;
+      width: 100%;
+      transition: width 0.1s ease-out;
+    }
+  </style>
+</head>
+<body>
+  <div id="energy-bar">
+    <div id="energy"></div>
+  </div>
+  <canvas id="gameCanvas" width="800" height="600"></canvas>
+
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    const car = { x: 375, y: 500, width: 50, height: 100, speed: 2, sprinting: false, dx: 0, dy: 0 };
+    const obstacles = [];
+    const ground = canvas.height - 50;
+    let energy = 100;
+    let sprintCooldown = false;
+    let keys = {};
+
+    window.addEventListener('keydown', (e) => keys[e.key] = true);
+    window.addEventListener('keyup', (e) => keys[e.key] = false);
+
+    // Function to generate random obstacles (oil spills)
+    function generateObstacles() {
+      if (Math.random() < 0.02) {
+        let xPos = Math.random() * (canvas.width - 50);
+        obstacles.push({ x: xPos, y: -50, width: 50, height: 50 });
+      }
+    }
+
+    // Function to update the game state
+    function update() {
+      // Sprint mechanic
+      if (keys['Shift'] && energy > 0 && !sprintCooldown) {
+        car.speed = 5;
+        energy -= 1;
+        if (energy <= 0) sprintCooldown = true;
+      } else {
+        car.speed = 2;
+        if (energy < 100 && !keys['Shift']) energy += 0.5;
+        if (energy >= 100) sprintCooldown = false;
+      }
+
+      // Control the car
+      if (keys['w']) car.dy = -car.speed;
+      else if (keys['s']) car.dy = car.speed;
+      else car.dy = 0;
+
+      if (keys['a']) car.dx = -car.speed;
+      else if (keys['d']) car.dx = car.speed;
+      else car.dx = 0;
+
+      // Update the car position
+      car.x += car.dx;
+      car.y += car.dy;
+
+      // Prevent the car from going out of bounds
+      if (car.x < 0) car.x = 0;
+      if (car.x + car.width > canvas.width) car.x = canvas.width - car.width;
+      if (car.y < 0) car.y = 0;
+      if (car.y + car.height > ground) car.y = ground - car.height;
+
+      // Handle obstacle collisions (oil spills)
+      for (let i = 0; i < obstacles.length; i++) {
+        const obstacle = obstacles[i];
+        if (car.x < obstacle.x + obstacle.width &&
+          car.x + car.width > obstacle.x &&
+          car.y < obstacle.y + obstacle.height &&
+          car.y + car.height > obstacle.y) {
+          energy = Math.max(0, energy - 10); // Lose energy when hitting oil
+          obstacles.splice(i, 1); // Remove obstacle
+        }
+      }
+
+      // Update energy bar
+      document.getElementById('energy').style.width = `${energy}%`;
+
+      // Generate new obstacles
+      generateObstacles();
+
+      // Move obstacles downward
+      for (let obstacle of obstacles) {
+        obstacle.y += 2;
+        if (obstacle.y > canvas.height) {
+          obstacles.splice(obstacles.indexOf(obstacle), 1); // Remove off-screen obstacles
+        }
+      }
+    }
+
+    // Function to draw everything on the canvas
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Draw the car
+      ctx.fillStyle = 'red';
+      ctx.fillRect(car.x, car.y, car.width, car.height);
+
+      // Draw obstacles (oil spills)
+      ctx.fillStyle = 'black';
+      for (let obstacle of obstacles) {
+        ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
+      }
+    }
+
+    // Game loop function
+    function gameLoop() {
+      update();
+      draw();
+      requestAnimationFrame(gameLoop);
+    }
+
+    gameLoop(); // Start the game loop
+  </script>
+</body>
+</html>
