@@ -5,12 +5,17 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Car Racing</title>
   <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #2e3b4e;
+    }
     canvas {
       display: block;
       margin: 0 auto;
-      background-color: #eee;
+      background-color: #111;
+      border: 2px solid #fff;
     }
-
     #energy-bar {
       position: absolute;
       top: 10px;
@@ -20,7 +25,6 @@
       border: 2px solid black;
       background: rgba(0, 0, 0, 0.1);
     }
-
     #energy-bar div {
       height: 100%;
       background: green;
@@ -45,6 +49,7 @@
     let energy = 100;
     let sprintCooldown = false;
     let keys = {};
+    let oilDelay = 0;
 
     window.addEventListener('keydown', (e) => keys[e.key] = true);
     window.addEventListener('keyup', (e) => keys[e.key] = false);
@@ -96,10 +101,16 @@
           car.x + car.width > obstacle.x &&
           car.y < obstacle.y + obstacle.height &&
           car.y + car.height > obstacle.y) {
-          energy = Math.max(0, energy - 10); // Lose energy when hitting oil
-          obstacles.splice(i, 1); // Remove obstacle
+          if (oilDelay <= 0) {
+            oilDelay = 30; // Set delay for 1 second
+            obstacles.splice(i, 1); // Remove the oil spill
+            energy = Math.max(0, energy - 10); // Lose energy when hitting oil
+          }
         }
       }
+
+      // Decrease oil delay timer
+      if (oilDelay > 0) oilDelay--;
 
       // Update energy bar
       document.getElementById('energy').style.width = `${energy}%`;
