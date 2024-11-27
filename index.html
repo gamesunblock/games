@@ -8,8 +8,8 @@
         body {
             margin: 0;
             overflow: hidden;
+            background: linear-gradient(to bottom, #87CEEB, #4682B4); /* Blauwe lucht */
             font-family: Arial, sans-serif;
-            background: linear-gradient(to bottom, #9b5de5, #f15bb5);
         }
 
         canvas {
@@ -18,23 +18,23 @@
             height: 100vh;
         }
 
-        #highscore-display, #score-display {
+        #score-display, #highscore-display {
             position: absolute;
             top: 10px;
             font-size: 20px;
-            color: #fff;
+            color: white;
             background: rgba(0, 0, 0, 0.5);
             padding: 5px 10px;
-            border-radius: 5px;
+            border-radius: 10px;
             z-index: 10;
-        }
-
-        #highscore-display {
-            right: 10px;
         }
 
         #score-display {
             left: 10px;
+        }
+
+        #highscore-display {
+            right: 10px;
         }
 
         button {
@@ -44,16 +44,16 @@
             transform: translate(-50%, -50%);
             padding: 20px 40px;
             font-size: 24px;
-            background-color: black;
+            background: linear-gradient(45deg, #ff5722, #ff9800);
             color: white;
             border: none;
-            border-radius: 5px;
+            border-radius: 10px;
             cursor: pointer;
             z-index: 10;
         }
 
         button:hover {
-            background-color: #444;
+            background: linear-gradient(45deg, #ff9800, #ff5722);
         }
     </style>
 </head>
@@ -65,32 +65,74 @@
     <script>
         const canvas = document.getElementById("gameCanvas");
         const ctx = canvas.getContext("2d");
-        const startBtn = document.getElementById("startBtn");
-        const scoreDisplay = document.getElementById("score");
-        const highscoreDisplay = document.getElementById("highscore");
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
 
-        let stickman = { x: 50, y: canvas.height - 150, width: 20, height: 50, vy: 0, jumping: false, crouching: false };
-        let obstacles = [];
-        let dragons = [];
-        let groundLines = [];
-        let energy = 15; // Energie in seconden
-        let speed = 4; // Basis snelheid
-        let score = 0;
-        let highscore = localStorage.getItem("highscore") || 0;
+        const startBtn = document.getElementById("startBtn");
+        const scoreDisplay = document.getElementById("score");
+        const highscoreDisplay = document.getElementById("highscore");
+
         let gameRunning = false;
         let paused = false;
+        let stickman = { x: 50, y: canvas.height - 150, width: 30, height: 50, vy: 0, jumping: false, crouching: false };
+        let obstacles = [];
+        let dragons = [];
+        let backgroundLayers = [
+            { img: null, x: 0, speed: 1, src: "https://via.placeholder.com/800x600/87CEEB" },
+            { img: null, x: 0, speed: 2, src: "https://via.placeholder.com/800x600/4682B4" },
+        ];
+        let energy = 15;
+        let speed = 3;
         let sprinting = false;
+        let score = 0;
+        let highscore = localStorage.getItem("highscore") || 0;
 
         highscoreDisplay.textContent = highscore;
+
+        // Laad achtergrondafbeeldingen
+        backgroundLayers.forEach(layer => {
+            const img = new Image();
+            img.src = layer.src;
+            layer.img = img;
+        });
+
+        function drawBackground() {
+            backgroundLayers.forEach(layer => {
+                layer.x -= layer.speed * (sprinting ? 2 : 1);
+                if (layer.x <= -canvas.width) layer.x = 0;
+                ctx.drawImage(layer.img, layer.x, 0, canvas.width, canvas.height);
+                ctx.drawImage(layer.img, layer.x + canvas.width, 0, canvas.width, canvas.height);
+            });
+        }
 
         function drawStickman() {
             ctx.fillStyle = "black";
             const height = stickman.crouching ? stickman.height / 2 : stickman.height;
             ctx.fillRect(stickman.x, stickman.y + (stickman.crouching ? stickman.height / 2 : 0), stickman.width, height);
             ctx.fillStyle = "white";
-            ctx.fillRect(stickman.x + 5, stickman.y - 10, 10, 10); // Hoofd
+            ctx.beginPath();
+            ctx.arc(stickman.x + stickman.width / 2, stickman.y - 10, 10, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = "black";
+            ctx.fillRect(stickman.x + stickman.width / 2 - 2, stickman.y - 12, 4, 2); // Ogen
+        }
+
+        function drawEnergyBar() {
+            const barWidth = 300;
+            const barHeight = 20;
+            const x = 20;
+            const y = 20;
+
+            const gradient = ctx.createLinearGradient(x, y, x + barWidth, y);
+            gradient.addColorStop(0, "green");
+            gradient.addColorStop(0.5, "yellow");
+            gradient.addColorStop(1, "red");
+
+            ctx.fillStyle = "black";
+            ctx.fillRect(x - 2, y - 2, barWidth + 4, barHeight + 4);
+
+            ctx.fillStyle = gradient;
+            ctx.fillRect(x, y, (energy / 15) * barWidth, barHeight);
         }
 
         function drawObstacles() {
@@ -101,46 +143,23 @@
         }
 
         function drawDragons() {
-            // Removed circular dragons since you wanted an energy bar instead
-        }
-
-        function drawGround() {
-            ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
-            ctx.fillRect(0, canvas.height - 100, canvas.width, 100);
-
-            groundLines.forEach(line => {
-                ctx.fillStyle = "rgba(50, 50, 50, 0.7)";
-                ctx.fillRect(line.x, canvas.height - 90, 25, 10);
+            ctx.fillStyle = "green";
+            dragons.forEach(dragon => {
+                const wingMovement = Math.sin(Date.now() / 200) * 10;
+                ctx.beginPath();
+                ctx.arc(dragon.x, dragon.y + wingMovement, 20, 0, Math.PI * 2);
+                ctx.fill();
             });
         }
 
-        function drawEnergyBar() {
-            const barWidth = 300;
-            const barHeight = 20;
-            const x = 20;
-            const y = 20;
-
-            ctx.fillStyle = "black"; // Outline
-            ctx.fillRect(x - 2, y - 2, barWidth + 4, barHeight + 4);
-
-            ctx.fillStyle = "yellow"; // Energy
-            ctx.fillRect(x, y, (energy / 15) * barWidth, barHeight);
-
-            ctx.lineWidth = 2;
-            ctx.strokeStyle = "black";
-            ctx.strokeRect(x, y, barWidth, barHeight);
-
-            ctx.lineJoin = "round";
-            ctx.lineCap = "round";
-        }
-
         function spawnObstacle() {
-            const size = Math.random() * 20 + 20;
+            const size = Math.random() * 30 + 20;
             obstacles.push({ x: canvas.width, y: canvas.height - size - 100, width: size, height: size });
         }
 
-        function spawnGroundLines() {
-            groundLines.push({ x: canvas.width });
+        function spawnDragon() {
+            const height = canvas.height - 150;
+            dragons.push({ x: canvas.width, y: height - 20 });
         }
 
         function updateGame() {
@@ -148,8 +167,11 @@
 
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            drawGround();
+            drawBackground();
+            drawStickman();
             drawEnergyBar();
+            drawObstacles();
+            drawDragons();
 
             stickman.y += stickman.vy;
             if (stickman.jumping) stickman.vy += 1;
@@ -158,39 +180,14 @@
                 stickman.jumping = false;
             }
 
-            drawStickman();
+            obstacles.forEach(obstacle => (obstacle.x -= sprinting ? speed * 4 : speed));
+            dragons.forEach(dragon => (dragon.x -= sprinting ? speed * 4 : speed));
 
-            obstacles.forEach(obstacle => obstacle.x -= sprinting ? speed * 4 : speed);
-            groundLines.forEach(line => line.x -= sprinting ? speed * 4 : speed);
-
-            obstacles = obstacles.filter(obstacle => obstacle.x + obstacle.width > 0);
-            groundLines = groundLines.filter(line => line.x > -30);
-
-            drawObstacles();
-
-            if (Math.random() < 0.03) spawnObstacle(); // 3% kans per frame
-            if (Math.random() < 0.02) spawnGroundLines(); // 2% kans per frame
-
-            obstacles.forEach(obstacle => {
-                if (
-                    stickman.x < obstacle.x + obstacle.width &&
-                    stickman.x + stickman.width > obstacle.x &&
-                    stickman.y < obstacle.y + obstacle.height &&
-                    stickman.y + stickman.height > obstacle.y
-                ) {
-                    endGame();
-                }
-            });
+            if (Math.random() < 0.03) spawnObstacle();
+            if (Math.random() < 0.05) spawnDragon();
 
             score += sprinting ? 2 : 1;
             scoreDisplay.textContent = score;
-
-            if (sprinting) {
-                energy -= 0.1;
-                if (energy <= 0) sprinting = false;
-            } else if (energy < 15) {
-                energy += 0.05;
-            }
 
             if (score > highscore) {
                 highscore = score;
@@ -202,49 +199,19 @@
         }
 
         function startGame() {
-            stickman.y = canvas.height - 100 - stickman.height;
             obstacles = [];
-            groundLines = [];
+            dragons = [];
             score = 0;
             energy = 15;
             gameRunning = true;
             paused = false;
             sprinting = false;
-            spawnObstacle();
-            spawnGroundLines();
             updateGame();
         }
 
-        function endGame() {
-            gameRunning = false;
-            alert(`Game over! Your score: ${score}`);
-            location.reload(); // Herlaad de pagina voor een nieuwe start
-        }
-
-        document.addEventListener("keydown", e => {
-            if (e.key === " ") {
-                if (!stickman.jumping) {
-                    stickman.jumping = true;
-                    stickman.vy = -15;
-                }
-            } else if (e.key.toLowerCase() === "s") {
-                stickman.crouching = true;
-            } else if (e.key.toLowerCase() === "d") {
-                sprinting = true;
-            }
-        });
-
-        document.addEventListener("keyup", e => {
-            if (e.key.toLowerCase() === "s") {
-                stickman.crouching = false;
-            } else if (e.key.toLowerCase() === "d") {
-                sprinting = false;
-            }
-        });
-
         startBtn.addEventListener("click", () => {
-            startGame();
             startBtn.style.display = "none";
+            startGame();
         });
     </script>
 </body>
