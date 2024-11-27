@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Stickman Running Game</title>
+    <title>Stickman Game</title>
     <style>
         body {
             margin: 0;
             overflow: hidden;
-            background: linear-gradient(to bottom, #87CEEB, #4682B4); /* Blauwe lucht */
-            font-family: Arial, sans-serif;
+            background: #87CEEB; /* Luchtblauw */
+            font-family: sans-serif;
         }
 
         canvas {
@@ -18,121 +18,52 @@
             height: 100vh;
         }
 
-        #score-display, #highscore-display {
+        .energy-bar {
             position: absolute;
             top: 10px;
-            font-size: 20px;
-            color: white;
-            background: rgba(0, 0, 0, 0.5);
-            padding: 5px 10px;
-            border-radius: 10px;
-            z-index: 10;
-        }
-
-        #score-display {
             left: 10px;
-        }
-
-        #highscore-display {
-            right: 10px;
-        }
-
-        button {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            padding: 20px 40px;
-            font-size: 24px;
-            background: linear-gradient(45deg, #ff5722, #ff9800);
-            color: white;
-            border: none;
+            width: 300px;
+            height: 20px;
+            background: black;
             border-radius: 10px;
-            cursor: pointer;
-            z-index: 10;
+            overflow: hidden;
         }
 
-        button:hover {
-            background: linear-gradient(45deg, #ff9800, #ff5722);
+        .energy-fill {
+            height: 100%;
+            background: yellow;
+            border-radius: 10px;
         }
     </style>
 </head>
 <body>
+    <div class="energy-bar">
+        <div class="energy-fill" id="energyFill"></div>
+    </div>
     <canvas id="gameCanvas"></canvas>
-    <div id="score-display">Score: <span id="score">0</span></div>
-    <div id="highscore-display">Highscore: <span id="highscore">0</span></div>
-    <button id="startBtn">Play Game</button>
     <script>
         const canvas = document.getElementById("gameCanvas");
         const ctx = canvas.getContext("2d");
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
 
-        const startBtn = document.getElementById("startBtn");
-        const scoreDisplay = document.getElementById("score");
-        const highscoreDisplay = document.getElementById("highscore");
-
-        let gameRunning = false;
-        let paused = false;
-        let stickman = { x: 50, y: canvas.height - 150, width: 30, height: 50, vy: 0, jumping: false, crouching: false };
+        let stickman = { x: 50, y: canvas.height - 120, width: 30, height: 50, vy: 0, jumping: false };
         let obstacles = [];
         let dragons = [];
-        let backgroundLayers = [
-            { img: null, x: 0, speed: 1, src: "https://via.placeholder.com/800x600/87CEEB" },
-            { img: null, x: 0, speed: 2, src: "https://via.placeholder.com/800x600/4682B4" },
-        ];
         let energy = 15;
         let speed = 3;
         let sprinting = false;
-        let score = 0;
-        let highscore = localStorage.getItem("highscore") || 0;
 
-        highscoreDisplay.textContent = highscore;
+        const energyFill = document.getElementById("energyFill");
 
-        // Laad achtergrondafbeeldingen
-        backgroundLayers.forEach(layer => {
-            const img = new Image();
-            img.src = layer.src;
-            layer.img = img;
-        });
-
-        function drawBackground() {
-            backgroundLayers.forEach(layer => {
-                layer.x -= layer.speed * (sprinting ? 2 : 1);
-                if (layer.x <= -canvas.width) layer.x = 0;
-                ctx.drawImage(layer.img, layer.x, 0, canvas.width, canvas.height);
-                ctx.drawImage(layer.img, layer.x + canvas.width, 0, canvas.width, canvas.height);
-            });
+        function updateEnergyBar() {
+            const percentage = (energy / 15) * 100;
+            energyFill.style.width = `${percentage}%`;
         }
 
         function drawStickman() {
             ctx.fillStyle = "black";
-            const height = stickman.crouching ? stickman.height / 2 : stickman.height;
-            ctx.fillRect(stickman.x, stickman.y + (stickman.crouching ? stickman.height / 2 : 0), stickman.width, height);
-            ctx.fillStyle = "white";
-            ctx.beginPath();
-            ctx.arc(stickman.x + stickman.width / 2, stickman.y - 10, 10, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.fillStyle = "black";
-            ctx.fillRect(stickman.x + stickman.width / 2 - 2, stickman.y - 12, 4, 2); // Ogen
-        }
-
-        function drawEnergyBar() {
-            const barWidth = 300;
-            const barHeight = 20;
-            const x = 20;
-            const y = 20;
-
-            const gradient = ctx.createLinearGradient(x, y, x + barWidth, y);
-            gradient.addColorStop(0, "green");
-            gradient.addColorStop(0.5, "yellow");
-            gradient.addColorStop(1, "red");
-
-            ctx.fillStyle = "black";
-            ctx.fillRect(x - 2, y - 2, barWidth + 4, barHeight + 4);
-
-            ctx.fillStyle = gradient;
-            ctx.fillRect(x, y, (energy / 15) * barWidth, barHeight);
+            ctx.fillRect(stickman.x, stickman.y, stickman.width, stickman.height);
         }
 
         function drawObstacles() {
@@ -143,11 +74,10 @@
         }
 
         function drawDragons() {
-            ctx.fillStyle = "green";
+            ctx.fillStyle = "red";
             dragons.forEach(dragon => {
-                const wingMovement = Math.sin(Date.now() / 200) * 10;
                 ctx.beginPath();
-                ctx.arc(dragon.x, dragon.y + wingMovement, 20, 0, Math.PI * 2);
+                ctx.arc(dragon.x, dragon.y, 20, 0, Math.PI * 2);
                 ctx.fill();
             });
         }
@@ -158,61 +88,56 @@
         }
 
         function spawnDragon() {
-            const height = canvas.height - 150;
-            dragons.push({ x: canvas.width, y: height - 20 });
+            const yPosition = stickman.y - 20; // Op hoofdhoogte
+            dragons.push({ x: canvas.width, y: yPosition });
         }
 
         function updateGame() {
-            if (paused) return;
-
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            drawBackground();
             drawStickman();
-            drawEnergyBar();
             drawObstacles();
             drawDragons();
+            updateEnergyBar();
 
             stickman.y += stickman.vy;
             if (stickman.jumping) stickman.vy += 1;
-            if (stickman.y >= canvas.height - 100 - stickman.height) {
-                stickman.y = canvas.height - 100 - stickman.height;
+            if (stickman.y >= canvas.height - 120) {
+                stickman.y = canvas.height - 120;
                 stickman.jumping = false;
             }
 
-            obstacles.forEach(obstacle => (obstacle.x -= sprinting ? speed * 4 : speed));
-            dragons.forEach(dragon => (dragon.x -= sprinting ? speed * 4 : speed));
+            obstacles.forEach(obstacle => obstacle.x -= speed);
+            dragons.forEach(dragon => dragon.x -= speed);
+
+            obstacles = obstacles.filter(obstacle => obstacle.x + obstacle.width > 0);
+            dragons = dragons.filter(dragon => dragon.x > 0);
 
             if (Math.random() < 0.03) spawnObstacle();
-            if (Math.random() < 0.05) spawnDragon();
+            if (Math.random() < 0.01) spawnDragon();
 
-            score += sprinting ? 2 : 1;
-            scoreDisplay.textContent = score;
+            requestAnimationFrame(updateGame);
+        }
 
-            if (score > highscore) {
-                highscore = score;
-                localStorage.setItem("highscore", highscore);
-                highscoreDisplay.textContent = highscore;
+        document.addEventListener("keydown", e => {
+            if (e.code === "Space" && !stickman.jumping) {
+                stickman.jumping = true;
+                stickman.vy = -15;
             }
-
-            if (gameRunning) requestAnimationFrame(updateGame);
-        }
-
-        function startGame() {
-            obstacles = [];
-            dragons = [];
-            score = 0;
-            energy = 15;
-            gameRunning = true;
-            paused = false;
-            sprinting = false;
-            updateGame();
-        }
-
-        startBtn.addEventListener("click", () => {
-            startBtn.style.display = "none";
-            startGame();
+            if (e.code === "ShiftLeft" && energy > 0) {
+                sprinting = true;
+                speed = 6;
+            }
         });
+
+        document.addEventListener("keyup", e => {
+            if (e.code === "ShiftLeft") {
+                sprinting = false;
+                speed = 3;
+            }
+        });
+
+        updateGame();
     </script>
 </body>
 </html>
