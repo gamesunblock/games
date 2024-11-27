@@ -3,14 +3,19 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Stickman Running</title>
+  <title>Stickman Parkour</title>
   <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #4b0082;
+    }
     canvas {
       display: block;
       margin: 0 auto;
-      background: linear-gradient(to top, #87CEEB, #FFFFFF);
+      background-color: #fff;
+      border: 2px solid #000;
     }
-
     #energy-bar {
       position: absolute;
       top: 10px;
@@ -20,7 +25,6 @@
       border: 2px solid black;
       background: rgba(0, 0, 0, 0.1);
     }
-
     #energy-bar div {
       height: 100%;
       background: green;
@@ -33,73 +37,116 @@
   <div id="energy-bar">
     <div id="energy"></div>
   </div>
-  <canvas id="gameCanvas" width="800" height="400"></canvas>
+  <canvas id="gameCanvas" width="800" height="600"></canvas>
 
   <script>
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
 
-    const stickman = { x: 50, y: 300, width: 50, height: 100, speed: 2, jump: false, crouch: false, sprinting: false };
-    const ground = 350;
-    const energyBar = document.getElementById('energy');
+    const stickman = { x: 100, y: 500, width: 50, height: 50, speed: 3, dx: 0, dy: 0, isJumping: false, jumpHeight: 20, isSprinting: false, sprintCooldown: false };
+    const obstacles = [];
     let energy = 100;
-    let sprintCooldown = false;
-
     let keys = {};
+    let oilDelay = 0;
 
     window.addEventListener('keydown', (e) => keys[e.key] = true);
     window.addEventListener('keyup', (e) => keys[e.key] = false);
 
+    // Function to generate random obstacles
+    function generateObstacles() {
+      if (Math.random() < 0.02) {
+        let height = Math.random() * 200 + 20; // Random height for obstacles
+        obstacles.push({ x: canvas.width, y: height, width: 50, height: height });
+      }
+    }
+
+    // Function to update the game state
     function update() {
       // Sprint mechanic
-      if (keys['Shift'] && energy > 0 && !sprintCooldown) {
+      if (keys['Shift'] && energy > 0 && !stickman.sprintCooldown) {
         stickman.speed = 5;
         energy -= 1;
-        if (energy <= 0) sprintCooldown = true;
+        if (energy <= 0) stickman.sprintCooldown = true;
       } else {
-        stickman.speed = 2;
+        stickman.speed = 3;
         if (energy < 100 && !keys['Shift']) energy += 0.5;
-        if (energy >= 100) sprintCooldown = false;
+        if (energy >= 100) stickman.sprintCooldown = false;
       }
 
-      // Movement
-      if (keys['d']) stickman.x += stickman.speed;
-      if (keys['s']) stickman.crouch = true;
-      else stickman.crouch = false;
+      // Handle stickman controls
+      if (keys['w'] && !stickman.isJumping) stickman.dy = -stickman.jumpHeight;
+      else if (keys['s']) stickman.dy = stickman.speed;
+      else stickman.dy = 0;
 
-      // Jump
-      if (keys['w'] && !stickman.jump) {
-        stickman.y -= 80;
-        stickman.jump = true;
-      }
+      if (keys['a']) stickman.dx = -stickman.speed;
+      else if (keys['d']) stickman.dx = stickman.speed;
+      else stickman.dx = 0;
 
-      if (stickman.jump) {
-        stickman.y += 5; // Gravity
-        if (stickman.y >= ground) {
-          stickman.y = ground;
-          stickman.jump = false;
+      // Update stickman position
+      stickman.x += stickman.dx;
+      stickman.y += stickman.dy;
+
+      // Prevent stickman from going out of bounds
+      if (stickman.x < 0) stickman.x = 0;
+      if (stickman.x + stickman.width > canvas.width) stickman.x = canvas.width - stickman.width;
+      if (stickman.y < 0) stickman.y = 0;
+      if (stickman.y + stickman.height > canvas.height) stickman.y = canvas.height - stickman.height;
+
+      // Handle obstacle collisions
+      for (let i = 0; i < obstacles.length; i++) {
+        const obstacle = obstacles[i];
+        if (stickman.x < obstacle.x + obstacle.width &&
+          stickman.x + stickman.width > obstacle.x &&
+          stickman.y < obstacle.y + obstacle.height &&
+          stickman.y + stickman.height > obstacle.y) {
+          if (oilDelay <= 0) {
+            oilDelay = 30; // 1-second delay when hitting obstacle
+            energy = Math.max(0, energy - 10); // Lose energy
+          }
         }
       }
 
+      // Decrease oil delay timer
+      if (oilDelay > 0) oilDelay--;
+
       // Update energy bar
-      energyBar.style.width = `${energy}%`;
+      document.getElementById('energy').style.width = `${energy}%`;
+
+      // Generate new obstacles
+      generateObstacles();
+
+      // Move obstacles
+      for (let obstacle of obstacles) {
+        obstacle.x -= 2;
+        if (obstacle.x < 0) {
+          obstacles.splice(obstacles.indexOf(obstacle), 1); // Remove off-screen obstacles
+        }
+      }
     }
 
+    // Function to draw everything
     function draw() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      // Draw stickman
+      // Draw the stickman
+      ctx.fillStyle = 'red';
+      ctx.fillRect(stickman.x, stickman.y, stickman.width, stickman.height);
+
+      // Draw obstacles
       ctx.fillStyle = 'black';
-      ctx.fillRect(stickman.x, stickman.y - (stickman.crouch ? 50 : 0), stickman.width, stickman.crouch ? 50 : stickman.height);
+      for (let obstacle of obstacles) {
+        ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
+      }
     }
 
+    // Game loop
     function gameLoop() {
       update();
       draw();
       requestAnimationFrame(gameLoop);
     }
 
-    gameLoop();
+    gameLoop(); // Start the loop
   </script>
 </body>
 </html>
